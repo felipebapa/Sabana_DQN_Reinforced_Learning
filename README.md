@@ -1,4 +1,4 @@
-# Maestría en Inteligencia Articial.
+# Maestría en Inteligencia Artificial.
 
 # Simulación y Aprendizaje por Refuerzo.
 
@@ -71,7 +71,7 @@ En cada paso el agente recibe un vector de 6 valores reales que describe el esta
 
 - Replay buffer (50 000), red objetivo (copia cada 500 pasos), epsilon-greedy lineal 1.0 -> 0.05 en 15 000 pasos.
 - Cada 10 episodios se evalúa la política greedy (5 episodios) y se guarda el mejor checkpoint.
-- Adam (lr 1e-3), γ = 0.99, batch 64, pérdida Huber, 500 episodios, semilla 42.
+- Adam (lr 5e-4), γ = 0.99, batch 64, pérdida Huber, 500 episodios, semilla 42.
 - Solo `terminated` corta el bootstrap. `truncated` no se trata como estado final.
 
 ## Flujo lógico del entrenamiento
@@ -166,17 +166,40 @@ python evaluate.py              # evalúa 20 episodios sin exploración
 python evaluate.py --render     # ver al agente en ventana
 ```
 
-## Resultados
+## Resultados del entrenamiento
+
+El agente entrenó durante 500 episodios con la semilla 42. En los primeros 10 episodios no llegó a la meta ni una vez, así que todos cerraron en −500, que es el tope de pasos con recompensa de −1 en cada uno. El primer éxito llegó en el episodio 11, tras unos 5 000 pasos, cuando epsilon todavía estaba cerca de 0.68. A partir de ahí la recompensa mejoró rápido. De los 500 episodios, 488 terminaron en la meta. Los 12 fallos ocurrieron en los primeros 50 y desde el episodio 51 el agente llegó a la meta en todos.
+
+| Episodios | Recompensa media | Mejor | Peor |
+|---|---|---|---|
+| 1 a 50 | −290 | −109 | −500 |
+| 51 a 100 | −169 | −99 | −395 |
+| 101 a 200 | −156 | −80 | −433 |
+| 201 a 300 | −131 | −75 | −247 |
+| 301 a 400 | −101 | −61 | −166 |
+| 401 a 500 | −92.5 | −60 | −171 |
+
+La media móvil de 20 episodios pasó de cerca de −440 al inicio a un valor entre −90 y −100 al final, con su mejor punto en −80 alrededor del episodio 465. El mejor episodio de entrenamiento fue −60, en el 494.
+
+Al evaluar el modelo guardado con evaluate.py, sin exploración y con 20 episodios de semillas distintas a las del entrenamiento y a las usadas para elegir el checkpoint, la recompensa media fue −82 ± 10.3, con mínimo de −107 y máximo de −68. Es mejor que la media de los últimos 100 episodios de entrenamiento (−92.5), algo esperable porque durante el entrenamiento el agente todavía toma un 5 % de acciones aleatorias.
+
 ![Curva de entrenamiento](training_curve.png)
 
-Evaluación con `evaluate.py` (20 episodios, política greedy, semillas distintas a las usadas para elegir el modelo):
+## Reflexión sobre los resultados
 
-| Métrica | Valor |
-|---|---|
-| Recompensa media | -82 ± 10.3 |
-| Mín / Máx | -107 / -68 |
+El agente aprendió a resolver Acrobot, pero la curva cuenta algo más interesante que el número final. Como la recompensa es −1 en cada paso, la recompensa total de un episodio es el número de pasos que tardó en llegar a la meta, con signo negativo. El entorno solo premia la velocidad, y mientras no hay un primer éxito todos los fallos valen exactamente lo mismo, −500. Por eso los primeros 10 episodios no enseñaron nada y todo dependió de que la exploración aleatoria diera con la meta por casualidad. Cuando eso pasó, el replay buffer ya tenía una transición terminal de la cual aprender y la mejora fue muy rápida.
 
-**Nota:** Vemos que DQN es inestable en Acrobot. Durante el entrenamiento la política greedy oscila entre buenos resultados y -500 entre un checkpoint y otro. Por eso `train.py` evalúa cada 10 episodios y **guarda el mejor modelo**, no el último.
+Después de ese salto la curva se estanca cerca de −160 durante más de cien episodios y solo mejora de forma sostenida pasado el episodio 250. Interpretamos que el agente primero encontró una forma de balancear que funcionaba pero era poco eficiente, y que afinar el momento exacto de cada torque para ganar energía en menos oscilaciones es un problema más difícil, porque el torque es solo ±1 y el sistema es subactuado. La varianza sigue alta al final. En los últimos 100 episodios el rango va de −60 a −171, en parte porque el estado inicial cambia en cada episodio y en parte porque la red apenas aproxima los valores Q.
+
+Hay además una limitación propia de DQN en este ambiente. Hubo caídas fuertes incluso con el agente ya entrenado, como la de −433 cerca del episodio 195, y por eso el último modelo no siempre es el mejor. Guardamos el mejor checkpoint según una evaluación greedy de 5 episodios, pero esos 5 episodios usan siempre las mismas semillas, así que el checkpoint elegido podría quedar algo favorecido por esos estados iniciales. Por eso la evaluación final se hizo aparte, con 20 episodios y semillas distintas. Como mejora futura se podría evaluar más episodios por checkpoint o probar variantes como Double DQN para reducir la sobreestimación de los valores Q.
+
+## Reflexión sobre lo que más costó
+
+Lo más difícil fue entender que la recompensa de este ambiente casi no da información. Al principio costaba aceptar que un agente aleatorio y uno que no hace nada obtuvieran exactamente el mismo −500, y que la única señal útil llegara con el primer éxito. Eso cambió la forma de pensar la exploración, porque dejó claro que bajar epsilon demasiado rápido podía dejar al agente sin ver nunca la meta.
+
+También costó la parte conceptual de separar terminated de truncated. En un corte por tiempo el brazo no llegó a un estado final real, así que el objetivo de Bellman tiene que seguir estimando el valor futuro y solo terminated debe cortar ese término. Es un detalle pequeño en el código que cambia lo que el agente aprende.
+
+En lo técnico, lo más frustrante fue la inestabilidad del entrenamiento. El rendimiento de la política greedy subía y bajaba entre checkpoints, y hubo que evaluar cada 10 episodios y guardar el mejor modelo en lugar del último. A eso se sumó la coordinación del equipo para unir el código, el notebook de resultados y el README en un solo repositorio.
 
 ## Archivos
 - `train.py`: red, entrenamiento y gráfica.

@@ -18,7 +18,7 @@ GAMMA = 0.99 # Cuánto valora el futuro frente al presente.
 # En este caso nos sirve bastante este GAMMA alto porque el objetivo es llegar a la meta (pendulo arriba) y eso requiere varios pasos.
 LR = 5e-4
 BATCH_SIZE = 64 # Cuántas experiencias usa en cada actualización. 
-# Esto quiere decir que cada 64 pasos de entrenamiento, el agente hace un paso de aprendizaje (backpropagation) usando esas 64 experiencias.
+# Esto quiere decir que, una vez el buffer tiene al menos 1 000 transiciones, en cada paso del entorno el agente hace un paso de aprendizaje (backpropagation) usando un minibatch de 64 experiencias.
 
 BUFFER_SIZE = 50_000 # Memoria de experiencias pasadas.
 # El agente guarda las experiencias pasadas (estado, acción, recompensa, siguiente estado) en un buffer de tamaño 50 000.
