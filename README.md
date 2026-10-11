@@ -199,7 +199,7 @@ Lo más difícil fue entender que la recompensa de este ambiente casi no da info
 
 También costó la parte conceptual de separar terminated de truncated. En un corte por tiempo el brazo no llegó a un estado final real, así que el objetivo de Bellman tiene que seguir estimando el valor futuro y solo terminated debe cortar ese término. Es un detalle pequeño en el código que cambia lo que el agente aprende.
 
-En lo técnico, lo más frustrante fue la inestabilidad del entrenamiento. El rendimiento de la política greedy subía y bajaba entre checkpoints, y hubo que evaluar cada 10 episodios y guardar el mejor modelo en lugar del último. A eso se sumó la coordinación del equipo para unir el código, el notebook de resultados y el README en un solo repositorio.
+En lo técnico, lo más frustrante fue la inestabilidad del entrenamiento. El rendimiento de la política greedy subía y bajaba entre checkpoints, y hubo que evaluar cada 10 episodios y guardar el mejor modelo en lugar del último. A eso se sumó la coordinación del equipo para unir el código y el README en un solo repositorio.
 
 ## Archivos
 - `train.py`: red, entrenamiento y gráfica.
